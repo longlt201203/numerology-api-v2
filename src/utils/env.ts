@@ -10,4 +10,7 @@ export class Env {
     static readonly DB_NAME = process.env.DB_NAME || "";
     static readonly DB_USER = process.env.DB_USER || "";
     static readonly DB_PASS = process.env.DB_PASS || "";
+
+    static readonly OPEN_AI_API_KEY = process.env.OPEN_AI_API_KEY || "";
+    static readonly OPEN_AI_CHAT_MODEL = process.env.OPEN_AI_CHAT_MODEL || "";
 }
