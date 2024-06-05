@@ -1,6 +1,8 @@
 import { ApiError } from "@errors";
 import { ExceptionFilter, ArgumentsHost, HttpStatus, InternalServerErrorException, HttpException, Catch } from "@nestjs/common";
 import { Response } from "express";
+import { Socket } from "socket.io";
+import { SocketEvents } from "@utils";
 
 /**
  * Global exception filter to handle all uncaught exceptions.
@@ -35,3 +37,22 @@ export class MyExceptionFilter implements ExceptionFilter {
         res.status(status).send(data);
     }
 } 
+
+@Catch()
+export class MySocketExceptionFilter implements ExceptionFilter {
+    catch(exception: any, host: ArgumentsHost) {
+        const socket = host.switchToWs().getClient<Socket>();
+        let error: ApiError = {
+            code: "unkwon_err",
+            message: "Unknow Error",
+            detail: exception
+        }
+
+        if (exception instanceof ApiError) {
+            error = exception;
+        }
+
+        socket.emit(SocketEvents.ERROR, error);
+    }
+
+}

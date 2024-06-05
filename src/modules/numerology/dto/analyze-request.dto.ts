@@ -1,18 +1,23 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsString } from "class-validator";
+import { Language } from "@utils";
+import { IsDateString, IsEnum, IsNotEmpty, IsString } from "class-validator";
 
 export class AnalyzeRequestDto {
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
-    fullName: string;
+    firstName: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    lsName: string;
 
     @ApiProperty()
     @IsDateString()
     dob: string;
 
     @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    country: string;
+    @IsEnum(Language)
+    lang: Language;
 }
