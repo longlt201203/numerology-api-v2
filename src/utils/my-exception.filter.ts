@@ -43,8 +43,8 @@ export class MySocketExceptionFilter implements ExceptionFilter {
     catch(exception: any, host: ArgumentsHost) {
         const socket = host.switchToWs().getClient<Socket>();
         let error: ApiError = {
-            code: "unkwon_err",
-            message: "Unknow Error",
+            code: "unknown_err",
+            message: "Unknown Error",
             detail: exception
         }
 

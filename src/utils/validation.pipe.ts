@@ -6,6 +6,7 @@ import { ApiValidationError } from '@errors';
 import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { Socket } from 'socket.io';
 
 @Injectable()
 export class ValidationPipe implements PipeTransform {
@@ -45,7 +46,7 @@ export class ValidationPipe implements PipeTransform {
    * @returns {boolean} True if the metatype is a complex type, false otherwise.
    */
   private toValidate(metatype: Function): boolean {
-    const types: Function[] = [String, Boolean, Number, Array, Object];
+    const types: Function[] = [String, Boolean, Number, Array, Object, Socket];
     return !types.includes(metatype);
   }
 }
