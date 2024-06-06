@@ -1,5 +1,5 @@
 import { MySocketExceptionFilter, SocketEvents, ValidationPipe } from "@utils";
-import { AnalyzeRequestDto } from "./dto";
+import { AnalyzeRequestDto, CompareRequestDto } from "./dto";
 import { NumerologyService } from "./numerology.service";
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
 import { Socket } from "socket.io";
@@ -20,6 +20,18 @@ export class NumerologyGateway {
     ) {
         this.numerologyService.analyzeStream(dto, (chunk) => {
             client.emit(SocketEvents.ANALYZING, chunk);
+        }, () => {
+            client.emit(SocketEvents.END_STREAM);
+        })
+    }
+
+    @SubscribeMessage(SocketEvents.COMPARE)
+    compare(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() dto: CompareRequestDto
+    ) {
+        this.numerologyService.compareStream(dto, (chunk) => {
+            client.emit(SocketEvents.COMPARING, chunk);
         }, () => {
             client.emit(SocketEvents.END_STREAM);
         })
