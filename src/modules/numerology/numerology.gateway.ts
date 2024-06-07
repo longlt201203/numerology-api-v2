@@ -1,5 +1,5 @@
 import { MySocketExceptionFilter, SocketEvents, ValidationPipe } from "@utils";
-import { AnalyzeRequestDto, CompareRequestDto } from "./dto";
+import { AnalyzeRequestDto, CalculateYearRequestDto, CompareRequestDto } from "./dto";
 import { NumerologyService } from "./numerology.service";
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
 import { Socket } from "socket.io";
@@ -19,7 +19,7 @@ export class NumerologyGateway {
         @MessageBody() dto: AnalyzeRequestDto
     ) {
         this.numerologyService.analyzeStream(dto, (chunk) => {
-            client.emit(SocketEvents.ANALYZING, chunk);
+            client.emit(SocketEvents.STREAMING, chunk);
         }, () => {
             client.emit(SocketEvents.END_STREAM);
         })
@@ -31,7 +31,19 @@ export class NumerologyGateway {
         @MessageBody() dto: CompareRequestDto
     ) {
         this.numerologyService.compareStream(dto, (chunk) => {
-            client.emit(SocketEvents.COMPARING, chunk);
+            client.emit(SocketEvents.STREAMING, chunk);
+        }, () => {
+            client.emit(SocketEvents.END_STREAM);
+        })
+    }
+
+    @SubscribeMessage(SocketEvents.CALCULATE_YEAR)
+    calculateYear(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() dto: CalculateYearRequestDto
+    ) {
+        this.numerologyService.calculateYearNumberStream(dto, (chunk) => {
+            client.emit(SocketEvents.STREAMING, chunk);
         }, () => {
             client.emit(SocketEvents.END_STREAM);
         })

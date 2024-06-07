@@ -1,4 +1,4 @@
-import { AnalyzeRequestDto, CalculateNumerologyDto, CalculateNumerologyResultDto, CompareRequestDto } from "./dto";
+import { AnalyzeRequestDto, CalculateNumerologyDto, CalculateNumerologyResultDto, CalculateYearRequestDto, CompareRequestDto } from "./dto";
 import { OpenAIService } from "@modules/openai";
 import { Injectable } from "@nestjs/common";
 
@@ -6,6 +6,7 @@ import { Injectable } from "@nestjs/common";
 export class NumerologyService {
     private static NUMEROLOGY_READING_SYSTEM_MESSAGE = "You are a Pythagorean Numerology expert. You will be provided with a person's calculated numerology map and the necessary language (the data is in JSON format). Please provide a numerology analysis for that person, following this structure: core numbers, challenges and solutions, additional numbers, and conclusion. The result must be in the provided language.";
     private static NUMEROLOGY_COMPARING_SYSTEM_MESSAGE = "You are a Pythagorean Numerology expert. You will be provided with a list of people's calculated numerology maps and the necessary language (the data will be in JSON format). Please provide a comparative numerology analysis of these individuals, evaluating their compatibility and differences, and scoring their relationships (in percentage). The result must be in the provided language.";
+    private static NUMEROLOGY_CALCULATE_YEAR_SYSTEM_MESSAGE = "You are a Pythagorean Numerology expert. You will be provided with a year number of a person and the necessary language (the data will be in JSON format). Please give the person the numerology analysis for that year number. The result must be in the provided language.";
 
     constructor(
         private readonly openaiService: OpenAIService
@@ -146,10 +147,19 @@ export class NumerologyService {
         }
     }
 
+    lowercaseAndNormalizeString(str: string) {
+        return str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/Đ/g, 'D')
+            .replace(/đ/g, 'd');
+    }
+
     calculate(dto: CalculateNumerologyDto): CalculateNumerologyResultDto {
         const dob = new Date(dto.dob);
-        const lsName = dto.lsName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
-        const firstName = dto.firstName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+        const lsName = this.lowercaseAndNormalizeString(dto.lsName);
+        const firstName = this.lowercaseAndNormalizeString(dto.firstName);
         const fullName = [lsName, firstName].join(" ");
         const lifePathNumber = this.calculateLifePathNumber(dob);
         const expressionNumber = this.calculateExpressionNumber(fullName);
@@ -182,7 +192,7 @@ export class NumerologyService {
         return res.choices[0].message.content;
     }
 
-    async analyzeStream(dto: AnalyzeRequestDto, onAnalyzing: (chunk: string) => void, onEndStream: () => void) {
+    async analyzeStream(dto: AnalyzeRequestDto, onStreaming: (chunk: string) => void, onEndStream: () => void) {
         const result = this.calculate(dto);
         const res = await this.openaiService.createChatCompletionsStream([
             { role: "system", content: NumerologyService.NUMEROLOGY_READING_SYSTEM_MESSAGE },
@@ -191,12 +201,12 @@ export class NumerologyService {
             }
         ]);
         for await (const chunk of res) {
-            if (chunk.choices[0].delta.content) onAnalyzing(chunk.choices[0].delta.content);
+            if (chunk.choices[0].delta.content) onStreaming(chunk.choices[0].delta.content);
         }
         onEndStream();
     }
 
-    async compareStream(dto: CompareRequestDto, onComparing: (chunk: string) => void, onEndStream: () => void) {
+    async compareStream(dto: CompareRequestDto, onStreaming: (chunk: string) => void, onEndStream: () => void) {
         const resultMap = { lang: dto.lang };
         dto.list.forEach((p, index) => {
             resultMap[`#${index+1}`] = this.calculate(p);
@@ -208,7 +218,27 @@ export class NumerologyService {
             }
         ]);
         for await (const chunk of res) {
-            if (chunk.choices[0].delta.content) onComparing(chunk.choices[0].delta.content);
+            if (chunk.choices[0].delta.content) onStreaming(chunk.choices[0].delta.content);
+        }
+        onEndStream();
+    }
+
+    async calculateYearNumberStream(dto: CalculateYearRequestDto, onStreaming: (chunk: string) => void, onEndStream: () => void) {
+        const birthday = new Date(dto.dob);
+        const d = new Date(dto.year, birthday.getMonth(), birthday.getDate());
+        const yearString = dto.year.toString();
+        const y = parseInt(yearString.slice(yearString.length-2, yearString.length));
+        const yearNumber = this.recursionDigitSum(y+birthday.getDate()+birthday.getMonth()+d.getDay()+2);
+        
+        const data = { lang: dto.lang, yearNumber: yearNumber };
+        const res = await this.openaiService.createChatCompletionsStream([
+            { role: "system", content: NumerologyService.NUMEROLOGY_CALCULATE_YEAR_SYSTEM_MESSAGE },
+            {
+                role: "user", content: JSON.stringify(data)
+            }
+        ]);
+        for await (const chunk of res) {
+            if (chunk.choices[0].delta.content) onStreaming(chunk.choices[0].delta.content);
         }
         onEndStream();
     }
